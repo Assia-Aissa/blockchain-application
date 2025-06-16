@@ -3,23 +3,23 @@ pragma solidity ^0.8.0;
 
 contract DiplomaRegistry {
     address public admin;
-
+    
     struct Diploma {
         string studentName;
         string degree;
         string university;
         uint256 date;
     }
-
-    mapping(address => Diploma[]) private diplomas;
-
-    modifier onlyAdmin() {
-        require(msg.sender == admin, "Only admin can do this");
-        _;
-    }
+    
+    mapping(address => Diploma[]) public diplomas;
 
     constructor() {
         admin = msg.sender;
+    }
+
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "Only admin");
+        _;
     }
 
     function addDiploma(
@@ -38,17 +38,17 @@ contract DiplomaRegistry {
         string[] memory universities,
         uint256[] memory dates
     ) {
-        uint length = diplomas[student].length;
-        names = new string[](length);
-        degrees = new string[](length);
-        universities = new string[](length);
-        dates = new uint256[](length);
+        Diploma[] memory studentDiplomas = diplomas[student];
+        names = new string[](studentDiplomas.length);
+        degrees = new string[](studentDiplomas.length);
+        universities = new string[](studentDiplomas.length);
+        dates = new uint256[](studentDiplomas.length);
         
-        for(uint i = 0; i < length; i++) {
-            names[i] = diplomas[student][i].studentName;
-            degrees[i] = diplomas[student][i].degree;
-            universities[i] = diplomas[student][i].university;
-            dates[i] = diplomas[student][i].date;
+        for (uint i = 0; i < studentDiplomas.length; i++) {
+            names[i] = studentDiplomas[i].studentName;
+            degrees[i] = studentDiplomas[i].degree;
+            universities[i] = studentDiplomas[i].university;
+            dates[i] = studentDiplomas[i].date;
         }
     }
 }
