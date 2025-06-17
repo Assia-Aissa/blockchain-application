@@ -76,7 +76,7 @@ const contractABI = [
     }
 ];
 
-const contractAddress = "0x1DE9a138A7a6b91f4Db9fBe7cd12f754C58Edc65";
+const contractAddress = "0xdeeCc5Ab359B0E699ACFF3b19366Ed50101f51e5";
 let web3;
 let contract;
 let accounts;
@@ -115,80 +115,50 @@ async function init() {
     }
 }
 
-// Add diploma - UPDATED WITH GAS SETTINGS
+// Add diploma
 async function addDiploma(event) {
     event.preventDefault();
     
     try {
-        const studentAddress = document.getElementById("studentAddress").value.trim();
-        const studentName = document.getElementById("studentName").value.trim();
-        const degree = document.getElementById("degree").value.trim();
-        const year = document.getElementById("year").value.trim();
-
+        const studentAddress = document.getElementById("studentAddress").value;
+        const studentName = document.getElementById("studentName").value;
+        const degree = document.getElementById("degree").value;
+        const year = document.getElementById("year").value;
+        
         // Validate address
         if (!web3.utils.isAddress(studentAddress)) {
             throw new Error("Adresse Ethereum invalide");
         }
-
-        // Validate year is a number
-        if (isNaN(year) || year === "") {
-            throw new Error("L'année doit être un nombre valide");
-        }
-
+        
+        // Show loading state
         const btn = document.getElementById("addDiplomaBtn");
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>En cours...';
-
-        // Set gas parameters matching your MetaMask settings
-        const gasParams = {
-            from: accounts[0],
-            maxFeePerGas: web3.utils.toWei('10', 'gwei'),    // 10 Gwei
-            maxPriorityFeePerGas: web3.utils.toWei('1', 'gwei'), // 1 Gwei
-            gas: 3000000  // Higher gas limit for safety
-        };
-
-        // First estimate gas
-        const estimatedGas = await contract.methods.ajouterDiplome(
-            studentAddress,
-            studentName,
-            degree,
-            year
-        ).estimateGas({ from: accounts[0] });
-
-        // Add 20% buffer to estimated gas
-        gasParams.gas = Math.floor(estimatedGas * 1.2);
-
-        // Send transaction with proper gas settings
+        
+        // Send transaction
         await contract.methods.ajouterDiplome(
             studentAddress,
             studentName,
             degree,
             year
-        ).send(gasParams);
-
+        ).send({ from: accounts[0] });
+        
+        // Reset form
         document.getElementById("diplomaForm").reset();
         alert("Diplôme ajouté avec succès!");
-
+        
     } catch (error) {
         console.error("Error adding diploma:", error);
-        
-        // Improved error messages
-        let errorMessage = error.message;
-        if (error.message.includes("User denied transaction")) {
-            errorMessage = "Transaction annulée par l'utilisateur";
-        } else if (error.message.includes("gas")) {
-            errorMessage = "Erreur de configuration du gaz. Essayez à nouveau.";
-        }
-        
-        alert(`Erreur: ${errorMessage}`);
+        alert(`Erreur: ${error.message}`);
     } finally {
+        // Reset button state
         const btn = document.getElementById("addDiplomaBtn");
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-plus-circle me-2"></i>Ajouter un diplôme';
     }
 }
 
-// Search diploma (unchanged)
+// Search diploma
 async function searchDiploma() {
     try {
         const searchAddress = document.getElementById("searchAddress").value;
