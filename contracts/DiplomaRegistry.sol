@@ -1,54 +1,33 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-contract DiplomaRegistry {
+contract DiplomeRegistry {
     address public admin;
-    
-    struct Diploma {
-        string studentName;
-        string degree;
-        string university;
-        uint256 date;
-    }
-    
-    mapping(address => Diploma[]) public diplomas;
 
     constructor() {
         admin = msg.sender;
     }
 
-    modifier onlyAdmin() {
-        require(msg.sender == admin, "Only admin");
-        _;
+    struct Diplome {
+        string nom;
+        string diplome;
+        uint annee;
     }
 
-    function addDiploma(
-        address student,
-        string memory studentName,
-        string memory degree,
-        string memory university,
-        uint256 date
-    ) public onlyAdmin {
-        diplomas[student].push(Diploma(studentName, degree, university, date));
+    mapping(address => Diplome) public diplomes;
+
+    function ajouterDiplome(
+        address _etudiant,
+        string memory _nom,
+        string memory _diplome,
+        uint _annee
+    ) public {
+        require(msg.sender == admin, "only admin can add a diploma");
+        diplomes[_etudiant] = Diplome(_nom, _diplome, _annee);
     }
 
-    function getDiplomas(address student) public view returns (
-        string[] memory names,
-        string[] memory degrees,
-        string[] memory universities,
-        uint256[] memory dates
-    ) {
-        Diploma[] memory studentDiplomas = diplomas[student];
-        names = new string[](studentDiplomas.length);
-        degrees = new string[](studentDiplomas.length);
-        universities = new string[](studentDiplomas.length);
-        dates = new uint256[](studentDiplomas.length);
-        
-        for (uint i = 0; i < studentDiplomas.length; i++) {
-            names[i] = studentDiplomas[i].studentName;
-            degrees[i] = studentDiplomas[i].degree;
-            universities[i] = studentDiplomas[i].university;
-            dates[i] = studentDiplomas[i].date;
-        }
+    function consulterDiplome(address _etudiant) public view returns (string memory, string memory, uint) {
+        Diplome memory d = diplomes[_etudiant];
+        return (d.nom, d.diplome, d.annee);
     }
 }
