@@ -22,9 +22,10 @@ contract DiplomeRegistry {
         string memory _diplome,
         uint _annee
     ) public {
-        require(msg.sender == admin, "only admin can add a diploma");
+        // require(msg.sender == admin, "only admin can add a diploma");
         diplomes[_etudiant] = Diplome(_nom, _diplome, _annee);
     }
+
 
     function consulterDiplome(address _etudiant) public view returns (string memory, string memory, uint) {
         Diplome memory d = diplomes[_etudiant];

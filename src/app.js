@@ -76,7 +76,7 @@ const contractABI = [
     }
 ];
 
-const contractAddress = "0xdeeCc5Ab359B0E699ACFF3b19366Ed50101f51e5";
+const contractAddress = "0x063390e763a4D7af5c73A17C5376b1baCa1F8801";
 let web3;
 let contract;
 let accounts;
@@ -87,31 +87,41 @@ async function init() {
         try {
             // Request account access
             await window.ethereum.request({ method: 'eth_requestAccounts' });
+            
+            // Create Web3 instance with error handling
             web3 = new Web3(window.ethereum);
+            
+            // Verify connection
+            try {
+                await web3.eth.getChainId();
+            } catch (rpcError) {
+                console.error("RPC Connection failed:", rpcError);
+                throw new Error("Cannot connect to blockchain. Is Ganache running?");
+            }
             
             // Get accounts
             accounts = await web3.eth.getAccounts();
-            document.getElementById('walletInfo').textContent = 
-                `Connecté: ${accounts[0].slice(0, 6)}...${accounts[0].slice(-4)}`;
+            if (accounts.length === 0) throw new Error("No accounts found");
             
-            // Initialize contract
-            contract = new web3.eth.Contract(contractABI, contractAddress);
+            // Initialize contract with increased timeout
+            contract = new web3.eth.Contract(contractABI, contractAddress, {
+                handleRevert: true,
+                transactionConfirmationBlocks: 1,
+                transactionPollingTimeout: 60000
+            });
             
-            // Check if admin
-            const admin = await contract.methods.admin().call();
-            if (accounts[0].toLowerCase() === admin.toLowerCase()) {
-                document.getElementById('adminPanel').style.display = "block";
-            }
+            // Rest of your init code...
             
-            document.getElementById("connectWallet").innerHTML = 
-                '<i class="fas fa-check me-2"></i>Connecté';
-                
         } catch (error) {
-            console.error("Error connecting to MetaMask:", error);
-            alert("Erreur de connexion à MetaMask");
+            console.error("Initialization error:", error);
+            alert(`Connection failed: ${error.message}`);
+            // Suggest reset actions
+            if (error.message.includes("RPC")) {
+                alert("Please:\n1. Restart Ganache\n2. Refresh page\n3. Try again");
+            }
         }
     } else {
-        alert("Veuillez installer MetaMask pour utiliser cette application!");
+        alert("Please install MetaMask!");
     }
 }
 
@@ -119,45 +129,54 @@ async function init() {
 async function addDiploma(event) {
     event.preventDefault();
     
+    const btn = document.getElementById("addDiplomaBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+
     try {
-        const studentAddress = document.getElementById("studentAddress").value;
-        const studentName = document.getElementById("studentName").value;
-        const degree = document.getElementById("degree").value;
-        const year = document.getElementById("year").value;
-        
-        // Validate address
+        // Get and validate form inputs
+        const studentAddress = document.getElementById("studentAddress").value.trim();
         if (!web3.utils.isAddress(studentAddress)) {
-            throw new Error("Adresse Ethereum invalide");
+            throw new Error("Invalid Ethereum address");
+        }
+
+        // Prepare transaction with conservative gas settings
+        const tx = {
+            from: accounts[0],
+            to: contractAddress,
+            data: contract.methods.ajouterDiplome(
+                studentAddress,
+                document.getElementById("studentName").value.trim(),
+                document.getElementById("degree").value.trim(),
+                document.getElementById("year").value.trim()
+            ).encodeABI(),
+            gas: 500000, // Increased gas limit
+            gasPrice: web3.utils.toWei('20', 'gwei') // Explicit gas price
+        };
+
+        // Send raw transaction for better error handling
+        const receipt = await web3.eth.sendTransaction(tx);
+        
+        console.log("Transaction successful:", receipt);
+        alert("Diploma added successfully!");
+
+    } catch (error) {
+        console.error("Transaction error:", error);
+        
+        // Improved error parsing
+        let errorMessage = "Transaction failed";
+        if (error.message.includes("JSON-RPC")) {
+            errorMessage = "Network connection failed. Please:\n1. Check Ganache is running\n2. Reset MetaMask connection";
+        } else if (error.data) {
+            errorMessage = error.data.message || error.message;
         }
         
-        // Show loading state
-        const btn = document.getElementById("addDiplomaBtn");
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>En cours...';
-        
-        // Send transaction
-        await contract.methods.ajouterDiplome(
-            studentAddress,
-            studentName,
-            degree,
-            year
-        ).send({ from: accounts[0] });
-        
-        // Reset form
-        document.getElementById("diplomaForm").reset();
-        alert("Diplôme ajouté avec succès!");
-        
-    } catch (error) {
-        console.error("Error adding diploma:", error);
-        alert(`Erreur: ${error.message}`);
+        alert(`Error: ${errorMessage}`);
     } finally {
-        // Reset button state
-        const btn = document.getElementById("addDiplomaBtn");
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-plus-circle me-2"></i>Ajouter un diplôme';
+        btn.innerHTML = '<i class="fas fa-plus-circle me-2"></i>Add Diploma';
     }
 }
-
 // Search diploma
 async function searchDiploma() {
     try {
